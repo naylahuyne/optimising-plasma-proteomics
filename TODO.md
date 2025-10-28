@@ -1,0 +1,2 @@
+- Move functions for visualization to helper file.
+- Add comments, generalize file paths.
