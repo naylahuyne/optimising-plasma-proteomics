@@ -1,0 +1,7 @@
+alphapept/alphapeptdeep/peptdeep-venv
+data-for-train/tsv_folders/
+data-for-train/final_data
+data-for-train/data-download-venv
+*.tsv
+*.hdf
+*.parquet
