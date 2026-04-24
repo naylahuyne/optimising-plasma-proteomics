@@ -100,6 +100,37 @@ def custom_collate(batch):
         'target_inds' : torch.cat(target_inds)
     }
 
+class ProteomeToolsPredictionDataset(Dataset):
+    def __init__(self, lookup_df, msms_dfs):
+        """
+        Arguments:
+            lookup_file (str): path to the lookup file
+            data_dir (str): path to the data directory
+        """
+        self.lookup_df = lookup_df
+        self.msms_dfs = msms_dfs
 
+    def __len__(self):
+        return self.lookup_df.shape[0]
+
+    def __getitem__(self, class_idx):
+        precursor_row = self.lookup_df.iloc[class_idx]
+        ref = precursor_row['ref']
+
+        start_id = precursor_row['Start id']
+        total_examples = precursor_row['Number of MS/MS']
+        end_id = start_id + total_examples
+
+        idx = (self.msms_dfs[ref]['id'] >= start_id) & (self.msms_dfs[ref]['id'] < end_id)
+        query = self.msms_dfs[ref].loc[idx]
+        xs = []
+        for row in query.itertuples():
+            xs.append(torch.tensor(row[2:]).reshape(4, 39))
+        return {
+            'precursor': self.lookup_df.iloc[class_idx]['Precursor'],
+            'ref' : ref,
+            'xs' : torch.stack(xs),
+            'id' : torch.arange(start_id, end_id),
+        }
 
     
