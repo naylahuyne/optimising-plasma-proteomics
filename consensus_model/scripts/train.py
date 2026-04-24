@@ -10,7 +10,7 @@ from enum import Enum
 from tqdm import tqdm
 
 from model.protonet import Protonet
-from model.encoder import ConvolutionEncoder
+from model.encoder import ConvolutionEncoder, TransformerEncoder, TransformerEncoderConfig
 from data.data import ProteomeToolsTrainingDataset, ProteomeToolsEvaluationDataset
 from data.data import custom_collate
 from .utils import get_argparser
@@ -18,8 +18,8 @@ from .utils import get_argparser
 from .eval import eval_validation
 
 class EncoderEnum(Enum):
-    CNN2D = 0
-    CNN1D = 1
+    CNN = 0
+    TRANSFORMER = 1
     MLP = 2
 
 def train():
@@ -30,11 +30,14 @@ def train():
     n_ways = args.ways
     n_supports = args.supports
     n_queries = args.queries
+    
+    hidden_dims = args.n_hddn
+    z_dims = args.n_ltnt
+
     learning_rate = args.learning_rate
     n_epoch = args.epoch
 
-    hidden_dims = 64
-    z_dims = 32
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     lookup_df = pd.read_csv(os.path.join(data_dir, 'lookup.tsv'), sep='\t')
     lookup_df['ref'] = lookup_df['Reference table'].apply(lambda x : int(x.split('.')[0]))
@@ -43,22 +46,32 @@ def train():
     for i in range(num_msms_files + 1):
         msms_dfs.append(pd.read_csv(os.path.join(data_dir, f"msms_{i:04d}.tsv"), sep='\t'))
 
-    torch.manual_seed(1337)
+    
     train_df = lookup_df.query("`Number of MS/MS` >= 10")
     testval_df = lookup_df.query("`Number of MS/MS` < 10 & `Number of MS/MS` > 5")
-    test_df = testval_df.sample(frac=0.5)
+    test_df = testval_df.sample(frac=0.5, random_state=1337)
     val_df = testval_df.drop(test_df.index)
 
+    torch.manual_seed(1337)
     encoder = ...
-    if args.encoder_id == EncoderEnum.CNN2D.value:
+    if args.encoder_id == EncoderEnum.CNN.value:
         encoder = ConvolutionEncoder(hidden_dims, z_dims)
-    elif args.encoder_id == EncoderEnum.CNN1D.value:
-        pass
+    elif args.encoder_id == EncoderEnum.TRANSFORMER.value:
+        assert z_dims % 4 == 0, "Latent dimensions must be divisible by 4"
+        config = TransformerEncoderConfig(
+            block_size=39,
+            n_layer=args.n_layer,
+            n_head=args.n_head,
+            n_embd=hidden_dims,
+            n_ltnt=z_dims,
+            dropout=args.dropout,
+            device=device
+        )
+        encoder = TransformerEncoder(config)
     elif args.encoder_id == EncoderEnum.MLP.value:
         pass
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    torch.manual_seed(1337)
+
     model = Protonet(encoder, n_ways, n_supports, n_queries, hidden_dims, z_dims)
     model.to(device)
     train_dataset = ProteomeToolsTrainingDataset(train_df, msms_dfs, n_supports, n_queries)
@@ -69,11 +82,12 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
     acc_validation_list = []
-    for ep in tqdm(range(n_epoch), desc='Training epoch: '):
+    for ep in tqdm(range(n_epoch), desc='Training epoch'):
         model.train()
-        for batch in train_loader:
+        for batch in tqdm(train_loader, desc='Episode'):
             optimizer.zero_grad()
             loss_val, metric_dicts = model.loss(batch, device)
+            print(f"Episode accuracy: {metric_dicts['acc']}")
             loss_val.backward()
             optimizer.step()
         model.eval()

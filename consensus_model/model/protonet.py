@@ -40,9 +40,9 @@ class Protonet(nn.Module):
         target_inds = torch.arange(0, self.n_ways).view(self.n_ways, 1, 1).expand(self.n_ways, self.n_queries, 1).long().to(device)
 
         x = torch.cat((xs, xq), dim = 0)
-        z = self.encoder(x.view(self.n_ways * (self.n_supports + self.n_queries), 1, n_fragment_types, max_fragment_length)).squeeze() # (B * (S + Q), 1, n_fragment_types, n_fragment_length) -> (B * (S + Q), Z_DIM)
-        z_proto = z[:self.n_ways*self.n_supports].view(self.n_ways, self.n_supports, self.z_dims).mean(1) # (B, S, Z_DIM) -> mean() -> (B, Z_DIM)
-        zq = z[self.n_ways*self.n_supports:] # (B * Q, Z_DIM)
+        z = self.encoder(x.view(self.n_ways * (self.n_supports + self.n_queries), n_fragment_types, max_fragment_length)).squeeze() # (B = W * (S+Q), Ty, L) -> (B, Z)
+        z_proto = z[:self.n_ways*self.n_supports].view(self.n_ways, self.n_supports, self.z_dims).mean(1) # (W, S, Z) -> mean(1) -> (W, Z)
+        zq = z[self.n_ways*self.n_supports:] # (W * Q, Z)
 
         dists = euclidean_dist(zq, z_proto) # (W * Q, W)
 

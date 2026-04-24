@@ -16,10 +16,10 @@ def eval_validation(eval_loader, encoder, device):
         
 
         x = torch.cat((xs, xq), dim = 0)
-        z = encoder(x.view(-1, 1, n_fragment_types, max_fragment_length)).squeeze() # (B * (S + Q), 1, n_fragment_types, n_fragment_length) -> (B * (S + Q), Z_DIM)
+        z = encoder(x.view(-1, n_fragment_types, max_fragment_length)).squeeze() # (B = W*(S+Q), Ty, L) -> (B, Z)
         z_dim = z.shape[-1]
-        z_proto = z[:n_classes*n_supports].view(n_classes, n_supports, z_dim).mean(1) # (B, S, Z_DIM) -> mean() -> (B, Z_DIM)
-        zq = z[n_classes*n_supports:] # (B * Q, Z_DIM)
+        z_proto = z[:n_classes*n_supports].view(n_classes, n_supports, z_dim).mean(1) # (W, S, Z) -> mean(1) -> (B, Z)
+        zq = z[n_classes*n_supports:] # (W * Q, Z)
 
         dists = euclidean_dist(zq, z_proto) # (W * Q, W)
 
