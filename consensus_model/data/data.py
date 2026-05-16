@@ -133,4 +133,21 @@ class ProteomeToolsPredictionDataset(Dataset):
             'id' : torch.arange(start_id, end_id),
         }
 
-    
+def custom_collate_predict(batch):
+    ref = []
+    precursor = []
+    xs = []
+    id = []
+    i = 0
+    for item in batch:
+        precursor.append(item['precursor'])
+        ref.append(item['ref'])
+        xs.append(item['xs'])
+        id.append(item['id'])
+        i += 1
+    return {
+        'precursor': precursor,
+        'ref' : ref,
+        'xs' : torch.cat(xs, dim=0),
+        'id' : id,
+    }    

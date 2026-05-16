@@ -1,0 +1,3 @@
+py -m scripts.predict --datadir "..\data-collection\final_data" --precursors_per_run 10 --model_path "transformer_encoder_weights.pth"
+
+py make_consensus_library.py --datadir "..\data-collection\final_data" --in_choices_file choices.txt --out_path lib.tsv

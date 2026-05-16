@@ -18,10 +18,10 @@ def eval_validation(eval_loader, encoder, device):
         x = torch.cat((xs, xq), dim = 0)
         z = encoder(x.view(-1, n_fragment_types, max_fragment_length)).squeeze() # (B = W*(S+Q), Ty, L) -> (B, Z)
         z_dim = z.shape[-1]
-        z_proto = z[:n_classes*n_supports].view(n_classes, n_supports, z_dim).mean(1) # (W, S, Z) -> mean(1) -> (B, Z)
-        zq = z[n_classes*n_supports:] # (W * Q, Z)
+        z_proto = z[:n_classes*n_supports].view(n_classes, n_supports, z_dim).mean(1) # (W, S, Z) -> mean(1) -> (W, Z)
+        zq = z[n_classes*n_supports:] # (nQ, Z)
 
-        dists = euclidean_dist(zq, z_proto) # (W * Q, W)
+        dists = euclidean_dist(zq, z_proto) # (nQ, W)
 
         log_p_y = F.log_softmax(-dists, dim=1)
         _, y_hat = log_p_y.max(1)
