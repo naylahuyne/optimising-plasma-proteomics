@@ -25,7 +25,7 @@ def get_argparser():
     parser = argparse.ArgumentParser(description="Predict")
     parser.add_argument("--datadir",
                         type=str,
-                        help="path to data directory for training",
+                        help="path to data directory",
                         required=True
                         )
     parser.add_argument("--precursors_per_run",
